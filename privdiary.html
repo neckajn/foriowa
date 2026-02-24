@@ -72,7 +72,9 @@
     // --- FIREBASE SETUP ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    
+    // 2. Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyCqSf9nKwtWX_ysMOOG8zbVu92jDd4ytiY",
         authDomain: "for-iowa.firebaseapp.com",
@@ -82,9 +84,25 @@
         appId: "1:536214425299:web:f0d04cf5fd1e02c462ce26",
         measurementId: "G-Y8ZKWHBTLC"
     };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    
+    // 3. Initialization (The "Stove")
+    const app = initializeApp(firebaseConfig); // Create 'app' first
+    const db = getFirestore(app);              // Use 'app' to create 'db'
+    const auth = getAuth(app);                 // Use 'app' to create 'auth'
+    const provider = new GoogleAuthProvider();
+    
+    // 4. Functions (Logic)
+    async function login() {
+        try {
+            await signInWithPopup(auth, provider);
+            alert("Logged in as " + auth.currentUser.email);
+        } catch (error) {
+            console.error("Login failed", error);
+        }
+    }
+    
+    // Make the login function accessible to your button
+    window.login = login;
 
     // --- ELEMENT SELECTORS ---
     const heartBtn = document.getElementById('write-trigger');
@@ -457,4 +475,5 @@ document.getElementById('confirm-no').onclick = () => { confirmModal.style.displ
     </main>
 
 </body>
+
 </html>
