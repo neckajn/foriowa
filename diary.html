@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>for.iowa - gallery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="diary-body">
+
+    <main class="paper-sheet">
+        <header class="diary-header">
+            <h1>for.iowa</h1>
+        </header>
+
+        <section class="diary-content">
+            <div class="paper-sheet" id="diary-container">
+                <div id="seal-gallery"></div> 
+            </div>
+        </section>
+
+        <div id="entry-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div id="spotify-player-container" style="margin: 0; display: none;"></div>
+
+                    <div id="image-preview-container" style="width: 100%; text-align: center;"></div>
+                    
+                    <p id="date-display"></p>
+                    <textarea class="entry-input" id="diary-textarea" readonly style="cursor: default;"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <p style="font-family: 'Cormorant-LightItalic'; font-size: 0.8rem; opacity: 0.6;">for.iowa</p>
+                </div>
+            </div>
+        </div>
+
+        <script type="module">
+    // --- FIREBASE SETUP ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqSf9nKwtWX_ysMOOG8zbVu92jDd4ytiY",
+        authDomain: "for-iowa.firebaseapp.com",
+        projectId: "for-iowa",
+        storageBucket: "for-iowa.firebasestorage.app",
+        messagingSenderId: "536214425299",
+        appId: "1:536214425299:web:f0d04cf5fd1e02c462ce26",
+        measurementId: "G-Y8ZKWHBTLC"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- ELEMENT SELECTORS ---
+    const modal = document.getElementById('entry-modal');
+    const entryInput = document.getElementById('diary-textarea');
+    const imagePreview = document.getElementById('image-preview-container');
+    const playerContainer = document.getElementById('spotify-player-container');
+    const dateDisplay = document.getElementById('date-display');
+
+    let diaryEntries = [];
+
+    // --- LOAD ENTRIES ON STARTUP ---
+    async function loadEntries() {
+        const q = query(collection(db, "entries"), orderBy("timestamp"));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(docSnap => {
+            const data = { id: docSnap.id, ...docSnap.data() };
+            diaryEntries.push(data);
+            createSeal(data);
+        });
+    }
+
+    loadEntries();
+
+    // --- MODAL CONTROLS ---
+    window.addEventListener('click', (e) => {
+        if (e.target == modal) closeModal();
+    });
+
+    function openModal() {
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        entryInput.value = '';
+        playerContainer.innerHTML = '';
+        imagePreview.innerHTML = '';
+        if (dateDisplay) dateDisplay.innerText = "";
+    }
+
+    function createSeal(data) {
+        const gallery = document.getElementById('seal-gallery');
+        const seal = document.createElement('img');
+        seal.src = "images/seal.png";
+        seal.className = 'submitted-seal';
+        seal.dataset.id = data.id;
+        seal.onclick = () => viewEntry(data.id);
+        gallery.appendChild(seal);
+    }
+
+    // --- VIEW MODE ONLY ---
+    function viewEntry(id) {
+        const entry = diaryEntries.find(e => e.id === id);
+        if (!entry) return;
+
+        entryInput.value = entry.text;
+        playerContainer.innerHTML = entry.songHtml || '';
+        imagePreview.innerHTML = entry.images || '';
+
+        // Handle the Spotify player visibility
+        if (entry.songHtml && entry.songHtml.trim() !== "") {
+            playerContainer.style.display = 'block';
+            // Hide the 'X' button if it exists in the saved HTML
+            const removeBtn = playerContainer.querySelector('#remove-song-btn');
+            if (removeBtn) removeBtn.style.display = 'none';
+        } else {
+            playerContainer.style.display = 'none';
+        }
+
+        // Hide 'X' buttons on images
+        const removeImgBtns = imagePreview.querySelectorAll('.remove-img-btn');
+        removeImgBtns.forEach(btn => btn.style.display = 'none');
+
+        if (dateDisplay && entry.displayDate) {
+            dateDisplay.innerText = "Written on " + entry.displayDate;
+            dateDisplay.style.display = "block";
+        }
+
+        // Auto-resize text area for reading
+        setTimeout(() => {
+            entryInput.style.height = 'auto';
+            entryInput.style.height = entryInput.scrollHeight + 'px';
+        }, 0);
+
+        openModal();
+    }
+</script>
+    </main>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="diary-body">
+
+    <main class="paper-sheet">
+        <header class="diary-header">
+            <h1>for.iowa</h1>
+        </header>
+
+        <section class="diary-content">
+
+            <div class="paper-sheet" id="diary-container">
+                
+                <div id="seal-gallery"></div> 
+
+            </div>
+        </div>
+            
+        </section>
+
+        <footer class="diary-footer">
+            <img src="images/heart-svgrepo.png" alt="Heart Icon" class="heart-icon" id="write-trigger" style="cursor: pointer;">
+        </footer>
+
+        <div id="entry-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div id="song-wrapper" style="width: 100%; text-align: center;">
+                        <button class="add-song-btn" id="add-song-trigger">add a song</button>
+                        <div id="spotify-search-area" style="display: none; width: 100%;">
+                            <input type="text" id="song-search-input" placeholder="search for a song..." 
+                                class="entry-input" autocomplete="off">
+                            <div id="spotify-results" style="max-height: 150px; overflow-y: auto; margin-top: 10px;"></div>
+                        </div>
+                    </div>
+
+                    <div id="spotify-player-container" style="margin: 0; display: none;"></div>
+
+                    <div id="image-preview-container" style="width: 100%; text-align: center;"></div>
+                    
+                    <p id="date-display"></p>
+                    <textarea placeholder="type here..." class="entry-input" id="diary-textarea"></textarea>
+                    
+                    <input type="file" id="image-input" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="modal-footer">
+                    <span class="insert-image" id="insert-image-trigger" style="cursor: pointer;">insert image</span>
+                    <button id="delete-entry-btn" style="display:none; background:none; border:none; color:#8A1515; text-decoration:underline; cursor:pointer; font-size:0.8rem;">delete</button>
+                    <button class="submit-btn" id="modal-action-btn">submit</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="confirm-modal">
+            <div class="confirm-content">
+                <h3>Are you sure?</h3>
+                <div class="confirm-btns">
+                    <button id="confirm-no">Cancel</button>
+                    <button id="confirm-yes">Yes</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module">
+    // --- FIREBASE SETUP ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqSf9nKwtWX_ysMOOG8zbVu92jDd4ytiY",
+        authDomain: "for-iowa.firebaseapp.com",
+        projectId: "for-iowa",
+        storageBucket: "for-iowa.firebasestorage.app",
+        messagingSenderId: "536214425299",
+        appId: "1:536214425299:web:f0d04cf5fd1e02c462ce26",
+        measurementId: "G-Y8ZKWHBTLC"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- ELEMENT SELECTORS ---
+    const heartBtn = document.getElementById('write-trigger');
+    const modal = document.getElementById('entry-modal');
+    const addSongBtn = document.getElementById('add-song-trigger');
+    const searchArea = document.getElementById('spotify-search-area');
+    const searchInput = document.getElementById('song-search-input');
+    const resultsDiv = document.getElementById('spotify-results');
+    const entryInput = document.getElementById('diary-textarea');
+    const actionBtn = document.getElementById('modal-action-btn');
+    const imageTrigger = document.getElementById('insert-image-trigger');
+    const imageInput = document.getElementById('image-input');
+    const imagePreview = document.getElementById('image-preview-container');
+    const modalBody = document.querySelector('.modal-body');
+    const deleteBtn = document.getElementById('delete-entry-btn');
+    const confirmModal = document.getElementById('confirm-modal');
+
+    // --- YOUR SPOTIFY CREDENTIALS ---
+    const CLIENT_ID = 'f7a8d9cc7285457ca9476ba4823485c9';
+    const CLIENT_SECRET = '3ec034b519ba46ecbf7dfe9f30a1943f';
+
+    // --- APP STATE ---
+    let diaryEntries = [];
+    let currentEditId = null;
+
+    // --- LOAD ENTRIES ON STARTUP ---
+    async function loadEntries() {
+        const q = query(collection(db, "entries"), orderBy("timestamp"));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(docSnap => {
+            const data = { id: docSnap.id, firestoreId: docSnap.id, ...docSnap.data() };
+            diaryEntries.push(data);
+            createSeal(data);
+        });
+    }
+
+    loadEntries();
+
+    // --- MODAL CONTROLS ---
+    heartBtn.addEventListener('click', () => {
+        currentEditId = null;
+        openModal();
+        enableEditMode();
+        actionBtn.innerText = "submit";
+    });
+
+    window.addEventListener('click', (e) => {
+    // If clicking the dark background, just hide the modal 
+    // but DO NOT call closeModal() because that clears the text.
+    if (e.target == modal) {
+        modal.style.display = 'none';
+        heartBtn.style.display = 'block';
+    }
+});
+
+    function openModal() {
+        modal.style.display = 'flex';
+        heartBtn.style.display = 'none';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        heartBtn.style.display = 'block';
+
+        entryInput.value = '';
+        entryInput.readOnly = false;
+        entryInput.style.pointerEvents = 'auto';
+        entryInput.style.userSelect = 'text';
+        entryInput.style.height = 'auto';
+        document.getElementById('spotify-player-container').innerHTML = '';
+        imagePreview.innerHTML = '';
+
+        actionBtn.innerText = "submit";
+        actionBtn.onclick = saveEntry;
+        deleteBtn.style.display = 'none';
+
+        const dateDisplay = document.getElementById('date-display');
+            if (dateDisplay) {
+                dateDisplay.innerText = "";
+                dateDisplay.style.display = "none"; // Ensure it is set to none
+            }
+        addSongBtn.style.display = 'block';
+        searchArea.style.display = 'none';
+        imageTrigger.style.display = 'block';
+    }
+
+    // --- SAVE / UPDATE ---
+    async function saveEntry() {
+        const textValue = entryInput.value;
+        const songHtml = document.getElementById('spotify-player-container').innerHTML;
+        const imagesHtml = imagePreview.innerHTML;
+
+        if (!textValue.trim() && imagesHtml === "") {
+            alert("Please write something first.");
+            return;
+        }
+
+        const entryData = {
+            text: textValue,
+            songHtml: songHtml,
+            images: imagesHtml,
+            timestamp: Date.now(),
+            // NEW: Add this line to create the readable date
+            displayDate: new Date().toLocaleString('en-US', { 
+                weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+            })
+        };
+
+        if (currentEditId !== null) {
+            const entry = diaryEntries.find(e => e.id === currentEditId);
+            await updateDoc(doc(db, "entries", entry.firestoreId), entryData);
+
+            const index = diaryEntries.findIndex(e => e.id === currentEditId);
+            if (index !== -1) diaryEntries[index] = { ...entryData, id: currentEditId, firestoreId: entry.firestoreId };
+
+            const oldSeal = document.querySelector(`[data-id="${currentEditId}"]`);
+            if (oldSeal) oldSeal.remove();
+
+            createSeal({ ...entryData, id: currentEditId });
+        } else {
+            const docRef = await addDoc(collection(db, "entries"), entryData);
+            const newEntry = { ...entryData, id: docRef.id, firestoreId: docRef.id };
+            diaryEntries.push(newEntry);
+            createSeal(newEntry);
+        }
+
+        closeModal();
+    }
+
+    function createSeal(data) {
+        const gallery = document.getElementById('seal-gallery');
+        const seal = document.createElement('img');
+        seal.src = "images/seal.png";
+        seal.className = 'submitted-seal';
+        seal.dataset.id = data.id;
+        seal.onclick = () => viewEntry(data.id);
+        gallery.appendChild(seal);
+    }
+
+    // --- VIEW & EDIT MODES ---
+    function viewEntry(id) {
+        const entry = diaryEntries.find(e => e.id === id);
+        currentEditId = id;
+
+        entryInput.value = entry.text;
+        document.getElementById('spotify-player-container').innerHTML = entry.songHtml;
+        imagePreview.innerHTML = entry.images;
+
+        entryInput.readOnly = true;
+        entryInput.style.cursor = 'default';
+
+        addSongBtn.style.display = 'none';
+        imageTrigger.style.display = 'none';
+        searchArea.style.display = 'none';
+
+        deleteBtn.style.display = 'block'; 
+        deleteBtn.onclick = () => { confirmModal.style.display = 'flex'; };
+
+        const removeBtns = document.querySelectorAll('.remove-img-btn, #remove-song-btn');
+        removeBtns.forEach(btn => btn.style.display = 'none');
+
+        const dateDisplay = document.getElementById('date-display');
+             if (dateDisplay && entry.displayDate) {
+            dateDisplay.innerText = "Written on " + entry.displayDate;
+            dateDisplay.style.display = "block";
+    }
+
+        actionBtn.innerText = "edit";
+        actionBtn.onclick = enableEditMode;
+
+        setTimeout(() => {
+            entryInput.style.height = 'auto';
+            entryInput.style.height = entryInput.scrollHeight + 'px';
+        }, 0);
+
+        openModal();
+    }
+
+    function enableEditMode() {
+        entryInput.readOnly = false;
+        entryInput.style.cursor = 'text';
+        entryInput.focus();
+
+        imageTrigger.style.display = 'block';
+
+        const playerContainer = document.getElementById('spotify-player-container');
+        // .trim() ensures that even if there is accidental whitespace, it counts as empty
+        if (!playerContainer.innerHTML.trim()) {
+            addSongBtn.style.display = 'block';
+            searchArea.style.display = 'none'; // Ensure search isn't open by default
+        } else {
+            addSongBtn.style.display = 'none';
+        }
+
+        const removeBtns = document.querySelectorAll('.remove-img-btn, #remove-song-btn');
+        removeBtns.forEach(btn => btn.style.display = 'block');
+
+        document.querySelectorAll('.remove-img-btn').forEach(btn => {
+            btn.onclick = (e) => e.target.parentElement.remove();
+        });
+        const songRemover = document.getElementById('remove-song-btn');
+        if (songRemover) songRemover.onclick = removeSong;
+
+        actionBtn.innerText = "save changes";
+        actionBtn.onclick = saveEntry;
+    }
+
+    // --- SPOTIFY ---
+    addSongBtn.addEventListener('click', () => {
+        addSongBtn.style.display = 'none';
+        searchArea.style.display = 'block';
+        searchInput.focus();
+    });
+
+    async function getAccessToken() {
+        const response = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + btoa(CLIENT_ID + ':' + CLIENT_SECRET)
+            },
+            body: 'grant_type=client_credentials'
+        });
+        const data = await response.json();
+        return data.access_token;
+    }
+
+    async function handlePermanentDelete() {
+    if (!currentEditId) return;
+
+    const entry = diaryEntries.find(e => e.id === currentEditId);
+    
+    try {
+        // 1. Delete from Firebase
+        await deleteDoc(doc(db, "entries", entry.firestoreId));
+
+        // 2. Remove from local array
+        diaryEntries = diaryEntries.filter(e => e.id !== currentEditId);
+
+        // 3. Remove physical seal from screen
+        const seal = document.querySelector(`[data-id="${currentEditId}"]`);
+        if (seal) seal.remove();
+
+        // 4. Close everything
+        confirmModal.style.display = 'none';
+        closeModal();
+    } catch (error) {
+        console.error("Error deleting entry:", error);
+        alert("Failed to delete. Check console.");
+    }
+}
+
+// Attach listeners to the "Are you sure" buttons
+document.getElementById('confirm-yes').onclick = handlePermanentDelete;
+document.getElementById('confirm-no').onclick = () => { confirmModal.style.display = 'none'; };
+
+    async function searchSpotify(query) {
+        if (!query || query.trim() === "") return;
+        try {
+            const token = await getAccessToken();
+            if (!token) return;
+            const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await response.json();
+            if (data.tracks && data.tracks.items.length > 0) {
+                displayResults(data.tracks.items);
+            } else {
+                resultsDiv.innerHTML = '<div style="color: #8A1515; padding: 10px;">No songs found.</div>';
+            }
+        } catch (error) {
+            console.error("Connection Error:", error);
+        }
+    }
+
+    function displayResults(tracks) {
+        resultsDiv.innerHTML = '';
+        tracks.forEach(track => {
+            const albumCover = track.album.images[2]?.url || '';
+            const trackEl = document.createElement('div');
+            trackEl.className = 'result-item';
+            trackEl.innerHTML = `
+                <img src="${albumCover}" class="result-album-cover">
+                <div class="result-info">
+                    <span class="result-title">${track.name}</span>
+                    <span class="result-artist">${track.artists[0].name}</span>
+                </div>
+            `;
+            trackEl.onclick = () => {
+                const playerContainer = document.getElementById('spotify-player-container');
+                playerContainer.innerHTML = `
+                    <div style="position: relative; margin-bottom: 15px;">
+                        <button id="remove-song-btn" style="position: absolute; top: -10px; right: -10px; z-index: 10; background: #8A1515; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1;">✕</button>
+                        <iframe src="https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0"
+                            width="100%" height="80" frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            style="border-radius: 12px; display: block; margin: 0;"></iframe>
+                    </div>
+                `;
+                playerContainer.style.display = 'block';
+                addSongBtn.style.display = 'none';
+                searchArea.style.display = 'none';
+                document.getElementById('remove-song-btn').onclick = removeSong;
+            };
+            resultsDiv.appendChild(trackEl);
+        });
+    }
+
+    function removeSong() {
+        const playerContainer = document.getElementById('spotify-player-container');
+        playerContainer.innerHTML = '';
+        playerContainer.style.display = 'none';
+        searchArea.style.display = 'none';
+        addSongBtn.style.display = 'block';
+    }
+
+    let debounceTimer;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value;
+        if (query.length > 2) {
+            debounceTimer = setTimeout(() => searchSpotify(query), 500);
+        }
+    });
+
+    // --- IMAGE ---
+    imageTrigger.addEventListener('click', () => {
+        if (!entryInput.readOnly) imageInput.click();
+    });
+
+    imageInput.addEventListener('change', function () {
+        const files = Array.from(this.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const newImageWrapper = document.createElement('div');
+                newImageWrapper.style.cssText = "position: relative; display: inline-block; margin: 10px;";
+                newImageWrapper.innerHTML = `
+                    <button class="remove-img-btn" style="position: absolute; top: 5px; right: 5px; background: #8A1515; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; z-index: 10;">✕</button>
+                    <img src="${e.target.result}" style="max-width: 100%; max-height: 200px; border-radius: 10px; display: block;">
+                `;
+                imagePreview.appendChild(newImageWrapper);
+                newImageWrapper.querySelector('.remove-img-btn').onclick = () => newImageWrapper.remove();
+            };
+            reader.readAsDataURL(file);
+        });
+        this.value = '';
+    });
+
+    // --- TEXTAREA ---
+    entryInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+        if (modalBody) modalBody.scrollTop = modalBody.scrollHeight;
+    });
+
+    entryInput.addEventListener('click', function () {
+        if (this.readOnly) return;
+        if (document.getElementById('spotify-player-container').innerHTML === "") {
+            searchArea.style.display = 'none';
+            addSongBtn.style.display = 'block';
+        }
+    });
+
+    actionBtn.onclick = saveEntry;
+
+</script>
+
+
+    </main>
+
+</body>
+</html>

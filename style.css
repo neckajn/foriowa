@@ -1,0 +1,538 @@
+/* landing */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a; 
+}
+
+.landing-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none; /* Removes underline from the link */
+}
+
+.envelope {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* This crops the image to fill the screen */
+    display: block;
+}
+
+.seal {
+    position: absolute;
+    top: 75%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* Adjust width to make the seal look natural on a full screen */
+    width: 150px; 
+    height: auto;
+    
+    /* Optional: subtle shadow to make it look "stuck" on */
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+    transition: transform 0.2s ease;
+}
+
+.landing-container:hover .seal {
+    transform: translate(-50%, -50%) scale(1.1); /* Seal grows slightly on hover */
+}
+
+/* diary */
+.paper-sheet {
+    background-color: #fdfcf8;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;    /* Keeps the "for.iowa" title and heart centered */
+    position: relative;
+    overflow: hidden;       /* Prevents scrolling outside the "paper" */
+    box-sizing: border-box;
+}
+
+#seal-gallery {
+    position: absolute;
+    top: 20%;               /* Adjust based on your title height */
+    left: 0;
+    width: 100%;            /* Expands to the full width of the screen */
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;        /* Allows seals to flow into a row */
+    justify-content: flex-start; /* Aligns them starting from the left */
+    padding: 0 10vw;        /* Keeps seals from touching the very edge of the screen */
+    gap: 40px;              /* Formal spacing between seals */
+    box-sizing: border-box;
+    z-index: 1;             /* Keeps seals behind the modal but above the paper */
+}
+
+/* Ensure the heart stays at the bottom center */
+.heart-icon {
+    position: absolute;
+    bottom: 5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: pointer;
+    z-index: 10;
+    
+    /* ADD THIS LINE */
+    width: 35px;  /* Adjust this number until it looks right to you */
+    
+    /* Optional: Add a slight glow or transition */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.heart-icon:hover {
+    transform: translateX(-50%) scale(1.1); /* Keeps it centered while growing on hover */
+    opacity: 0.8;
+}
+
+@font-face {
+    font-family: 'FlaemischeKanzleischrift';
+    src: url('fonts/Flaemische Kanzleischrift.ttf') format('truetype'); 
+    /* Ensure the filename above matches your actual file exactly */
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'MyHelvetica';
+    src: url('fonts/Helvetica.ttf') format('truetype'); /* Update path/extension if needed */
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Cormorant-LightItalic';
+    src: url('fonts/Cormorant-LightItalic.ttf') format('truetype'); /* Update path/extension if needed */
+    font-weight: normal;
+    font-style: normal;
+}
+
+.diary-header {
+    width: 100%;
+    text-align: center;
+    /* This pushes the whole header down from the top of the page */
+    padding-top: 5vh; 
+}
+
+.diary-header h1 {
+    font-family: 'FlaemischeKanzleischrift', serif; 
+    font-weight: normal;
+    font-size: 2.5rem; 
+    color: #333;
+    margin: 0;
+    text-transform: none; 
+}
+
+#diary-container {
+    position: relative; /* Essential to "trap" the absolute seal inside */
+}
+
+.diary-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: center; 
+    justify-content: center;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #2c2c2c;
+}
+
+.diary-footer {
+    padding-bottom: 20px;
+}
+
+.diary-footer {
+    padding-bottom: 40px; /* Adjust distance from the bottom */
+    display: flex;
+    justify-content: center;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none; /* Prevents clicking the heart while it's invisible */
+    transform: scale(0.8);
+}
+
+.diary-body {
+    background-color: #000000; /* Match the dark landing area */
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    opacity: 0; 
+    /* This handles the ENTIRE transition smoothly */
+    animation: smoothEntrance 0.3s ease-out forwards;
+}
+
+@keyframes smoothEntrance {
+    from { 
+        opacity: 0;
+        transform: scale(1.05); /* Makes it feel like the envelope "opened" into the diary */
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* modal */
+
+.modal {
+   display: none; 
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    
+    /* CHANGE THESE TWO LINES */
+    justify-content: center;
+    align-items: flex-start; /* Aligns the content to the top instead of center */
+    padding-top: 20vh;        /* Adjust this number to move it closer/further from the header */
+}
+
+.modal-content {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 850px;
+    height: 400px; /* Reset this to 550px to prevent compression */
+    padding: 5px 20px 20px 20px; /* REMOVED RIGHT PADDING (0px) */
+    border: 1.3px solid #8A1515;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.modal-body {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;   /* Changed from scroll to auto */
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.entry-input {
+    width: 100%;
+    height: auto;
+    background: transparent;
+    min-height: 200px;
+    border: none;
+    outline: none;
+    resize: none;
+    text-align: center;
+    font-family: 'MyHelvetica', Arial, sans-serif;
+    flex-shrink: 0;          /* Prevents the box from squishing when things get crowded */
+}
+
+/* Style the main body scrollbar to match your red pill design */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-body::-webkit-scrollbar-thumb {
+    background-color: #8A1515; /* Your deep red */
+    border-radius: 10px;
+}
+
+/* Ensure the button wrapper doesn't push itself down */
+#song-wrapper {
+    width: 100%;
+    text-align: center;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 0; /* Removes text-based "ghost" spacing around the button */
+
+}
+
+.add-song-btn {
+    background-color: #8A1515;
+    color: white;
+    border: none;
+    padding: 5px 25px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto !important; /* Forces it to stay at the top */
+}
+
+
+/* Style the textarea's specific scrollbar to match your theme */
+.entry-input::-webkit-scrollbar {
+    width: 6px;
+}
+
+.entry-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.entry-input::-webkit-scrollbar-thumb {
+    background-color: #8A1515; /* Your theme red */
+    border-radius: 10px;
+}
+
+.modal-footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.insert-image {
+    color: #8A1515;
+    text-decoration: underline;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.submit-btn {
+    background-color: #e6b3b3;
+    color: #8A1515;
+    border: 1px solid #d8a7a7;
+    padding: 5px 20px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.add-song-btn, 
+.entry-input, 
+.insert-image, 
+.diary-textarea,
+.submit-btn {
+    font-family: 'MyHelvetica', sans-serif;
+}
+
+#spotify-player-container {
+    width: 100%;
+    margin-top: -5px !important; /* Pulls the player up toward the top padding */
+    margin-bottom: 5px !important;
+    padding: 0 !important;
+    line-height: 0;
+}
+
+#spotify-player-container iframe {
+    border: none;
+    display: block;
+}
+
+#song-wrapper:empty {
+    display: none;
+}
+
+#spotify-player-container:empty, 
+#spotify-player-container[style*="display: none"],
+#spotify-results:empty,
+#image-preview-container:empty,
+#spotify-search-area[style*="display: none"] {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 1. Ensure the search area is the anchor for the results */
+#spotify-search-area {
+    position: relative; 
+    width: 100%;
+}
+
+/* 2. Make the results list float over the content */
+#spotify-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: #fff5f5; /* Match modal color */
+    border: 1px solid #d8a7a7;
+    border-radius: 0 0 10px 10px;
+    background-color: #fff5f5; /* Matches your modal background */
+    max-height: 200px;
+    overflow-y: auto;   
+}
+
+#song-search-input {
+    height: 40px !important; /* Force the height to be small */
+    min-height: 40px !important;
+    padding: 5px 15px;
+    margin-top: 10px;
+    border-bottom: 1px solid #d8a7a7; /* Keeps your underline style */
+}
+
+.modal-content > #song-wrapper:first-child {
+    margin-top: -5px; /* Adjust this to move it closer to the pink border */
+}
+
+/* 1. Set the width of the scrollbar */
+.modal-body::-webkit-scrollbar {
+    width: 6px; /* Makes it a thin line */
+}
+
+/* 2. The track (the background of the scrollbar) */
+.modal-body::-webkit-scrollbar-track {
+    background: transparent; /* Makes the background invisible */
+    margin: 10px 0;         /* Adds a gap at the top and bottom */
+}
+
+/* 3. The thumb (the actual red line that moves) */
+.modal-body::-webkit-scrollbar-thumb {
+    background-color: #8A1515; /* Your deep red color */
+    border-radius: 10px;       /* Makes it rounded like a pill */
+}
+
+/* 4. Optional: darken it slightly on hover */
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background-color: #6d1010; 
+}
+
+/* Container for each song row */
+.result-item {
+    display: flex;
+    align-items: center;  /* Vertically centers image and text */
+    padding: 10px;
+    gap: 15px;            /* Adds space between image and text */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;           /* Increased padding for breathing room */
+    gap: 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0dada;
+    min-height: 60px;        /* Forces the row to be tall enough for text */
+    box-sizing: border-box;
+}
+
+.result-info {
+    display: flex;
+    flex-direction: column;  /* Stacks Title over Artist */
+    justify-content: center;
+    text-align: left;
+    overflow: hidden;        /* Prevents text from breaking the modal */
+    flex-grow: 1;            /* Allows text area to take up remaining space */
+}
+
+.result-title {
+    font-size: 0.95rem;
+    font-family: 'MyHelvetica';
+    font-weight: bold;
+    color: #8A1515;          /* Your theme's red */
+    display: block;          /* Ensures it takes its own line */
+    line-height: 1.2;        /* Prevents vertical clipping */
+}
+
+.result-artist {
+    font-size: 0.8rem;
+    font-family: 'MyHelvetica';
+    color: #666;
+    display: block;          /* Ensures it takes its own line */
+    line-height: 1.2;
+}
+
+.result-album-cover {
+    width: 45px;
+    height: 45px;
+    border-radius: 4px;
+    flex-shrink: 0;          /* Prevents image from getting squashed */
+    object-fit: cover;
+}
+
+/* 1. Target the search results container specifically */
+#spotify-results::-webkit-scrollbar {
+    width: 6px; /* Keep it thin and minimalist */
+}
+
+/* 2. Make the track (background) invisible */
+#spotify-results::-webkit-scrollbar-track {
+    background: transparent; 
+    margin: 5px 0; /* Adds a small gap at the top and bottom */
+}
+
+/* 3. The "Pill" - Match your deep red color */
+#spotify-results::-webkit-scrollbar-thumb {
+    background-color: #8A1515; /* Your theme's red */
+    border-radius: 10px;       /* Gives it that rounded look */
+}
+
+/* 4. Optional: subtle hover effect */
+#spotify-results::-webkit-scrollbar-thumb:hover {
+    background-color: #6d1010; 
+}
+
+#date-display {
+    font-size: 0.8rem;
+    color: #8A1515;
+    font-style: italic;
+    /* REMOVE margin-bottom from here */
+    opacity: 0.8;
+    display: none; /* Keeps it completely hidden and takes up zero space */
+    letter-spacing: 0.05rem;
+    font-family: 'Cormorant-LightItalic';
+}
+
+/* ADD THIS: This only adds the space when the date is visible */
+#date-display[style*="display: block"] {
+    margin-bottom: 0px;
+}
+
+#confirm-modal {
+    display: none;
+    position: fixed;
+    z-index: 3000;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    justify-content: center; align-items: center;
+}
+.confirm-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    font-family: 'MyHelvetica';
+    border: 1px solid #8A1515;
+    max-width: 300px;
+}
+.confirm-btns {
+    display: flex; gap: 10px; justify-content: center; margin-top: 15px; font-family: 'MyHelvetica';
+}
+.confirm-btns button {
+    padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer;
+}
+#confirm-yes { background: #8A1515; color: white; }
+#confirm-no { background: #ccc; }
+
+.submitted-seal {
+    position: static;     /* Remove the absolute positioning from individual seals */
+    width: 70px; 
+    height: auto;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    transition: transform 0.2s ease;
+}

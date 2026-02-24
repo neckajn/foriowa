@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>for.iowa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <a href="diary.html" class="landing-container" id="envelope-link">
+        <img src="images/envelope.jpg" alt="Envelope" class="envelope">
+        <img src="images/waxseal.png" alt="Wax Seal" class="seal">
+    </a>
+
+    <script>
+    const link = document.getElementById('envelope-link');
+    link.addEventListener('click', function(e) {
+        // No e.preventDefault() - let the browser go immediately
+        // No fade-out class - prevents the "laggy" feeling
+    });
+</script>
+
+</body>
+</html>
