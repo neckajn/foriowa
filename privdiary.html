@@ -190,47 +190,67 @@
     }
 
     // --- SAVE / UPDATE ---
-    async function saveEntry() {
-        const textValue = entryInput.value;
-        const songHtml = document.getElementById('spotify-player-container').innerHTML;
-        const imagesHtml = imagePreview.innerHTML;
+   async function saveEntry() {
+    const textValue = entryInput.value;
+    const songHtml = document.getElementById('spotify-player-container').innerHTML;
+    const imagesHtml = imagePreview.innerHTML;
 
-        if (!textValue.trim() && imagesHtml === "") {
-            alert("Please write something first.");
-            return;
-        }
+    if (!textValue.trim() && imagesHtml === "") {
+        alert("Please write something first.");
+        return;
+    }
 
-        const entryData = {
-            text: textValue,
-            songHtml: songHtml,
-            images: imagesHtml,
-            timestamp: Date.now(),
-            // NEW: Add this line to create the readable date
-            displayDate: new Date().toLocaleString('en-US', { 
-                weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-            })
-        };
+    const entryData = {
+        text: textValue,
+        songHtml: songHtml,
+        images: imagesHtml,
+        timestamp: Date.now(),
+        displayDate: new Date().toLocaleString('en-US', { 
+            weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        })
+    };
 
+    try {
         if (currentEditId !== null) {
+            // --- UPDATING EXISTING ENTRY ---
             const entry = diaryEntries.find(e => e.id === currentEditId);
             await updateDoc(doc(db, "entries", entry.firestoreId), entryData);
 
             const index = diaryEntries.findIndex(e => e.id === currentEditId);
-            if (index !== -1) diaryEntries[index] = { ...entryData, id: currentEditId, firestoreId: entry.firestoreId };
+            if (index !== -1) {
+                diaryEntries[index] = { ...entryData, id: currentEditId, firestoreId: entry.firestoreId };
+            }
 
             const oldSeal = document.querySelector(`[data-id="${currentEditId}"]`);
             if (oldSeal) oldSeal.remove();
 
             createSeal({ ...entryData, id: currentEditId });
+            console.log("Entry updated successfully!");
+
         } else {
+            // --- SAVING NEW ENTRY ---
             const docRef = await addDoc(collection(db, "entries"), entryData);
             const newEntry = { ...entryData, id: docRef.id, firestoreId: docRef.id };
             diaryEntries.push(newEntry);
             createSeal(newEntry);
+            console.log("New entry saved!");
         }
 
-        closeModal();
+        closeModal(); // Only close if the save was successful
+
+    } catch (error) {
+        console.error("Firebase Error:", error);
+        
+        // Specific check for the 1MB limit error
+        if (error.message.includes("too large") || error.code === 'out-of-range') {
+            alert("Error: The image or content is too large for the database. Try using a smaller/compressed photo.");
+        } else if (error.code === 'permission-denied') {
+            alert("Permission Denied: You need to log in (5-click secret) to save changes.");
+        } else {
+            alert("Something went wrong: " + error.message);
+        }
     }
+}
 
     function createSeal(data) {
         const gallery = document.getElementById('seal-gallery');
@@ -433,24 +453,41 @@ document.getElementById('confirm-no').onclick = () => { confirmModal.style.displ
         if (!entryInput.readOnly) imageInput.click();
     });
 
-    imageInput.addEventListener('change', function () {
-        const files = Array.from(this.files);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function (e) {
+imageInput.addEventListener('change', function () {
+    const files = Array.from(this.files);
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function() {
+                // Create a Canvas to resize the image
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Limit size to fit in Firestore
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Convert to a smaller, compressed JPEG string
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+
                 const newImageWrapper = document.createElement('div');
                 newImageWrapper.style.cssText = "position: relative; display: inline-block; margin: 10px;";
                 newImageWrapper.innerHTML = `
                     <button class="remove-img-btn" style="position: absolute; top: 5px; right: 5px; background: #8A1515; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; z-index: 10;">✕</button>
-                    <img src="${e.target.result}" style="max-width: 100%; max-height: 200px; border-radius: 10px; display: block;">
+                    <img src="${compressedDataUrl}" style="max-width: 100%; max-height: 200px; border-radius: 10px; display: block;">
                 `;
                 imagePreview.appendChild(newImageWrapper);
                 newImageWrapper.querySelector('.remove-img-btn').onclick = () => newImageWrapper.remove();
             };
-            reader.readAsDataURL(file);
-        });
-        this.value = '';
+        };
+        reader.readAsDataURL(file);
     });
+    this.value = '';
+});
 
     // --- TEXTAREA ---
     entryInput.addEventListener('input', function () {
@@ -477,4 +514,5 @@ document.getElementById('confirm-no').onclick = () => { confirmModal.style.displ
 </body>
 
 </html>
+
 
